@@ -231,11 +231,17 @@ QVariant LockedTransactionTableModel::headerData(int section, Qt::Orientation or
     {
         if(role == Qt::DisplayRole)
         {
-            return columns[section];
+			if (section >= 0 && section < columns.size())
+			{
+				return columns[section];
+			}
         }
         else if (role == Qt::TextAlignmentRole)
         {
-            return column_alignments_for_locked[section];
+			if (section >= 0 && section < sizeof(column_alignments_for_locked) / sizeof(int))
+			{
+				return column_alignments_for_locked[section];
+			}
         }
         else if (role == Qt::ToolTipRole)
         {

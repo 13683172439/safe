@@ -5,6 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "walletmodel.h"
+#include "walletview.h"
 
 #include "addresstablemodel.h"
 #include "guiconstants.h"
@@ -16,6 +17,7 @@
 #include "candytablemodel.h"
 #include "assetsdistributerecordmodel.h"
 #include "applicationsregistrecordmodel.h"
+#include "masternode-sync.h"
 
 #include "base58.h"
 #include "keystore.h"
@@ -68,6 +70,7 @@ WalletModel::WalletModel(const PlatformStyle *platformStyle, CWallet *wallet, Op
 {
     fHaveWatchOnly = wallet->HaveWatchOnly();
     fForceCheckBalanceChanged = false;
+	pWalletView = 0;
 
     assetsNamesInfo.clear();
 
@@ -162,6 +165,13 @@ void WalletModel::updateAllBalanceChanged(bool copyTmp)
 {
     if(fForceCheckBalanceChanged || chainActive.Height() != cachedNumBlocks || privateSendClient.nPrivateSendRounds != cachedPrivateSendRounds || cachedTxLocks != nCompleteTXLocks)
     {
+		bool bUpdateConfirmations = false;
+
+		if (chainActive.Height() != cachedNumBlocks)
+		{
+			bUpdateConfirmations = true;
+		}
+		
         fForceCheckBalanceChanged = false;
 
         // Balance and number of transactions might have changed
@@ -169,16 +179,32 @@ void WalletModel::updateAllBalanceChanged(bool copyTmp)
         cachedPrivateSendRounds = privateSendClient.nPrivateSendRounds;
 
         checkBalanceChanged(copyTmp);
-        if(transactionTableModel)
+		
+		if (!bUpdateConfirmations)
+		{
+			return ;
+		}
+
+		WalletModel::PageType pageType = WalletModel::NonePage;
+		if (pWalletView)
+		{
+			pageType = (WalletModel::PageType)pWalletView->getPageType();
+		}
+		
+        if(transactionTableModel && pageType == WalletModel::TransactionPage)
             transactionTableModel->updateConfirmations();
-        if(lockedTransactionTableModel)
-            lockedTransactionTableModel->updateConfirmations();
-        if(candyTableModel)
-            candyTableModel->updateConfirmations();
-        if(assetsDistributeTableModel)
-            assetsDistributeTableModel->updateConfirmations();
-        if(applicationsRegistTableModel)
-            applicationsRegistTableModel->updateConfirmations();
+
+		if (lockedTransactionTableModel && pageType == WalletModel::LockPage)
+			lockedTransactionTableModel->updateConfirmations();
+
+		if (candyTableModel && pageType == WalletModel::CandyPage)
+			candyTableModel->updateConfirmations();
+
+		if (assetsDistributeTableModel && pageType == WalletModel::AssetPage)
+			assetsDistributeTableModel->updateConfirmations();
+
+		if (applicationsRegistTableModel && pageType == WalletModel::AppPage)
+			applicationsRegistTableModel->updateConfirmations();
     }
 }
 
@@ -187,6 +213,7 @@ void WalletModel::pollBalanceChanged()
     // Get required locks upfront. This avoids the GUI from getting stuck on
     // periodical polls if the core is holding the locks for a longer time -
     // for example, during a wallet rescan.
+
     TRY_LOCK(cs_main, lockMain);
     if(!lockMain)
         return;
@@ -201,9 +228,12 @@ void WalletModel::checkBalanceChanged(bool copyTmp)
 {
     if(copyTmp)
     {
-        LOCK2(cs_main, wallet->cs_wallet);
-        wallet->mapWallet_tmp.clear();
-        std::map<uint256, CWalletTx>().swap(wallet->mapWallet_tmp);
+		{
+			wallet->mapWallet_tmp.clear();
+			std::map<uint256, CWalletTx>().swap(wallet->mapWallet_tmp);
+		}
+
+        LOCK2(cs_main, wallet->cs_wallet);        
         for (std::map<uint256, CWalletTx>::const_iterator it = wallet->mapWallet.begin(); it != wallet->mapWallet.end(); ++it)
             wallet->mapWallet_tmp[(*it).first] = (*it).second;
     }
@@ -1019,6 +1049,11 @@ bool WalletModel::abandonTransaction(uint256 hash) const
 bool WalletModel::hdEnabled() const
 {
     return wallet->IsHDEnabled();
+}
+
+void WalletModel::setWalletView(WalletView *walletView)
+{
+	pWalletView = walletView;
 }
 
 void EncryptWorker::doEncrypt()

@@ -27,6 +27,7 @@ class AssetsPage;
 class ApplicationsPage;
 class AssetsDistributeRecordView;
 class ApplicationsRegistRecordView;
+class TransactionTableModel;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -62,6 +63,12 @@ public:
     bool handlePaymentRequest(const SendCoinsRecipient& recipient);
 
     void showOutOfSyncWarning(bool fShow);
+
+	int getPageType();
+
+	void ShowHistoryPage();
+
+	WalletModel *getWalletMode();
 
 private:
     ClientModel *clientModel;
@@ -164,6 +171,9 @@ public Q_SLOTS:
     void updateAssetsInfo(int showType,bool bConfirmedNewAssets=false,const QString& strAssetName="");
 
     void updateAssetsDisplay(bool updateAsset=true);
+
+	void refreshFinished_slot(TransactionTableModel* txModel);
+
 Q_SIGNALS:
     /** Signal that we want to show the main window */
     void showNormalIfMinimized();
@@ -178,6 +188,8 @@ Q_SIGNALS:
                              const QString& label,bool fAsset,const QString& strAssetUnit,const QString& strAssetName);
     /** Notify that the out of sync warning icon has been pressed */
     void outOfSyncWarningClicked();
+
+	void refreshFinished(TransactionTableModel* txModel);
 };
 
 #endif // BITCOIN_QT_WALLETVIEW_H
