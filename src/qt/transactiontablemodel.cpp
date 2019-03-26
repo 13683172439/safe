@@ -283,6 +283,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *platformStyle,
     columnAmount = TransactionTableModel::TransactionColumnAmount;
 
 	bIsRefreshWallet = false;
+	nUpdateCount = 0;
 
  //   priv->refreshWallet();
 
@@ -337,6 +338,17 @@ void TransactionTableModel::updateConfirmations()
     // Invalidate status (number of confirmations) and (possibly) description
     //  for all rows. Qt is smart enough to only actually request the data for the
     //  visible rows.
+    nUpdateCount++;
+    if (nUpdateCount > 10000)
+    {
+	nUpdateCount = 10000;
+    }
+
+    if (nUpdateCount < 30)
+    {
+	return ;
+    }
+
     int size = priv->size()-1;
     if (size > 0)
     {
