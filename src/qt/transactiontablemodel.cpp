@@ -341,12 +341,12 @@ void TransactionTableModel::updateConfirmations()
     nUpdateCount++;
     if (nUpdateCount > 10000)
     {
-	nUpdateCount = 10000;
+		nUpdateCount = 10000;
     }
 
-    if (nUpdateCount < 30)
+    if (nUpdateCount < 8)
     {
-	return ;
+		return ;
     }
 
     int size = priv->size()-1;
